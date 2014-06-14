@@ -4,7 +4,9 @@
 
 - /sources: Source and reference files and repositories
 - /past-configs: Old and (probably) out-dated configurations I've used
-- Other directories hold the configurations I am currently using
+- Other directories hold the configurations I am currently using, and they are:
+	- /apache
+	- /varnish
 
 ## WordPress Server Setup
 
