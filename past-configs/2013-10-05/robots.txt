@@ -1,0 +1,18 @@
+User-agent: *
+Disallow: /wp-admin/
+Disallow: /wp-includes/
+Disallow: /wp-content/plugins/
+Disallow: /wp-content/themes/
+
+# Block Google from crawling shortlinks (default permalink structure)
+Disallow: *?p=*
+
+# Block Google from crawling feeds
+Disallow: /feed/
+Disallow: */feed/
+
+# Block Google from crawling sitemaps
+Disallow: /*.xml
+Disallow: /*/*.xml # Subdirectory-based Multisite sitemaps
+
+Sitemap: http://example.com/sitemap_index.xml
