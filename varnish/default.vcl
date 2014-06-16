@@ -154,12 +154,11 @@ sub vcl_fetch {
 
 sub vcl_deliver {
 
-	# remove resp.http.Server;
-	# remove resp.http.X-Powered-By;
-	# remove resp.http.X-Varnish;
-	# remove resp.http.Age;
-	# remove resp.http.Via;
-	# remove resp.http.X-W3TC-Minify;
+	# Remove unnecessary headers
+	remove resp.http.Server;
+	remove resp.http.X-Powered-By;
+	remove resp.http.X-Varnish;
+	remove resp.http.Via;
 
 	# DIAGNOSTIC HEADERS
 	if (obj.hits > 0) {
