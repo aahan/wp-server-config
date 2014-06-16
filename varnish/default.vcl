@@ -81,7 +81,31 @@ sub vcl_hash {
 	}
 }
 
+sub vcl_hit {
+	if (req.request == "PURGE") {
+		purge;
+		error 200 "Purged.";
+	}
+}
+
+sub vcl_miss {
+	if (req.request == "PURGE") {
+		purge;
+		error 200 "Purged.";
+	}
+}
+
 sub vcl_fetch {
+	# Don't store backend
+	if (req.url ~ "nocache|wp-admin|admin|login|wp-(comments-post|login|signup|activate|mail|cron)\.php|preview\=true|admin-ajax\.php|xmlrpc\.php|bb-admin|server-status|control\.php|bb-login\.php|bb-reset-password\.php|register\.php") {
+		return(hit_for_pass);
+	}
+	# Otherwise cache away!
+	if ( (!(req.url ~ "nocache|wp-admin|admin|login|wp-(comments-post|login|signup|activate|mail|cron)\.php|preview\=true|admin-ajax\.php|xmlrpc\.php|bb-admin|server-status|control\.php|bb-login\.php|bb-reset-password\.php|register\.php")) || (req.request == "GET") ) {
+		unset beresp.http.set-cookie;
+		set beresp.ttl = 2h;
+	}
+
 	# make sure grace is at least 2 minutes
 	if (beresp.grace < 2m) {
 		set beresp.grace = 2m;
@@ -108,10 +132,10 @@ sub vcl_fetch {
 		return(hit_for_pass);
 
 	# You are extending the lifetime of the object artificially
-	} else if (beresp.ttl < 300s) {
-		set beresp.ttl   = 300s;
-		set beresp.grace = 300s;
-		set beresp.http.X-Cacheable = "YES:Forced";
+	# } else if (beresp.ttl < 300s) {
+	# 	set beresp.ttl   = 300s;
+	# 	set beresp.grace = 300s;
+	# 	set beresp.http.X-Cacheable = "YES:Forced";
 
 	# Varnish determined the object was cacheable
 	} else {
