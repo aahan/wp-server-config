@@ -1,6 +1,6 @@
 <?php
 
-/**
+/*
  * Tell WordPress/PHP to get client IP address from `X-Forwarded-For` HTTP header set by Varnish
  * (First, Varnish should be configured to do so; see varnish/default.vcl)
  */
@@ -9,7 +9,7 @@ if ( isset( $_SERVER[ "HTTP_X_FORWARDED_FOR" ] ) ) {
 }
 
 
-/**
+/*
  * General Configurations
  */
 
@@ -23,7 +23,7 @@ if ( isset( $_SERVER[ "HTTP_X_FORWARDED_FOR" ] ) ) {
 # define( 'WP_MEMORY_LIMIT', '64M' );
 
 
-/**
+/*
  * Define URL of 'wp-content' directory
  * (Used to serve static content via an Origin-pull CDN e.g. CloudFront, MaxCDN)
  * http://codex.wordpress.org/Editing_wp-config.php#Moving_wp-content_folder
@@ -51,7 +51,7 @@ if ( isset( $_SERVER[ "HTTP_X_FORWARDED_FOR" ] ) ) {
 # [...]
 
 
-/**
+/*
  * Multisite Configurations
  */
 
