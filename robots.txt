@@ -1,0 +1,20 @@
+User-agent: *
+Disallow: /wp-admin/
+Disallow: /wp-includes/
+Disallow: */xmlrpc.php
+Disallow: */wp-*.php
+Disallow: */trackback/
+Disallow: *?wptheme=
+Disallow: *?comments=
+Disallow: *?replytocom
+Disallow: */comment-page-
+Disallow: *?p=
+Disallow: *?s=
+Disallow: */wp-content/
+Allow: */wp-content/uploads/
+
+# Sitemaps
+Sitemap: http://example.com/sitemap.xml
+
+# Google News Sitemap
+# Sitemap: http://example.com/sitemap-news.xml
