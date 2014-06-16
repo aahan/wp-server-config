@@ -1,5 +1,9 @@
 ## Sources/References
 
+**wp-config.php:**
+
+- [Tell WordPress/PHP to get client IP address from `X-Forwarded-For` HTTP header set by Varnish](http://ocaoimh.ie/2011/08/09/speed-up-wordpress-with-apache-and-varnish/) by Donncha O Caoimh
+
 **Apache:**
 
 - HTML5 Boilerplate's [Server Configs](https://github.com/h5bp/server-configs)
@@ -18,6 +22,5 @@
 - ewanleith/[Wordpress-Server-Configuration-Files](https://github.com/ewanleith/Wordpress-Server-Configuration-Files)
 - nicolargo/[varnish-nginx-wordpress](https://github.com/nicolargo/varnish-nginx-wordpress)
 - JohnMcLear/[Wordpress-Varnish-VCL](https://github.com/JohnMcLear/Wordpress-Varnish-VCL)
-- [Speed up WordPress with Apache and Varnish](http://ocaoimh.ie/2011/08/09/speed-up-wordpress-with-apache-and-varnish/) by Donncha O Caoimh
 - [Varnish WordPress VCL Example Templates](https://www.varnish-cache.org/trac/wiki/VCLExamples#VCLExampleTemplates)
 - VCL Basics > [VCL Request Flow](https://www.varnish-software.com/static/book/VCL_Basics.html#vcl-request-flow)
