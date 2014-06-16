@@ -4,8 +4,8 @@
  * Tell WordPress/PHP to get client IP address from `X-Forwarded-For` HTTP header set by Varnish
  * (First, Varnish should be configured to do so; see varnish/default.vcl)
  */
-if ( isset( $_SERVER[ "HTTP_X_FORWARDED_FOR" ] ) ) {
-	$_SERVER[ 'REMOTE_ADDR' ] = $_SERVER[ "HTTP_X_FORWARDED_FOR" ];
+if ( isset( $_SERVER[ 'HTTP_X_FORWARDED_FOR' ] ) ) {
+	$_SERVER[ 'REMOTE_ADDR' ] = $_SERVER[ 'HTTP_X_FORWARDED_FOR' ];
 }
 
 
