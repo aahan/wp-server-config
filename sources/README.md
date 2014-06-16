@@ -9,6 +9,7 @@
 **Varnish:**
 
 - DreamHost's [Varnish VCL Collection](https://github.com/dreamhost/varnish-vcl-collection)
+- mattiasgeniar/[varnish-3.0-configuration-templates](https://github.com/mattiasgeniar/varnish-3.0-configuration-templates) & ([varnish-4.0](https://github.com/mattiasgeniar/varnish-4.0-configuration-templates))
 - [W3 Total Cache](https://wordpress.org/plugins/w3-total-cache/) (see: ini/varnish-sample-config.vcl)
 - Ipstenu/[varnish-http-purge](https://github.com/Ipstenu/varnish-http-purge) ([WordPress Plugin](http://wordpress.org/plugins/varnish-http-purge/))
 - pothi/[WordPress-Varnish](https://github.com/pothi/WordPress-Varnish)
