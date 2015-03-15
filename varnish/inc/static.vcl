@@ -17,19 +17,18 @@
 
 sub vcl_recv {
 	# Remove cookies from the request (by client) for static files
-	if (req.request ~ "^(GET|HEAD)$" && req.url ~ "\.(jpg|jpeg|webp|gif|png|svg|svgz|ico|css|zip|tgz|tbz|gz|rar|bz2|pdf|txt|tar|wav|ogg|ogv|webm|mp3|mp4|bmp|rtf|js|flv|swf|html|htm|woff|ttf|ttc|otf|eot)(\?.*)?$") {
+	if (req.method ~ "^(GET|HEAD)$" && req.url ~ "\.(jpg|jpeg|webp|gif|png|svg|svgz|ico|css|zip|tgz|tbz|gz|rar|bz2|pdf|txt|tar|wav|ogg|ogv|webm|mp3|mp4|bmp|rtf|js|flv|swf|html|htm|woff|ttf|ttc|otf|eot)(\?.*)?$") {
 		if (req.url ~ "nocache") {
 			return(pass);
 		}
 		set req.url = regsub(req.url, "\?.*$", "");
 		unset req.http.Cookie;
-		set req.grace = 2m;
-		return(lookup);
+		return(hash);
 	}
 }
 
-sub vcl_fetch {
-	if (req.request ~ "^(GET|HEAD)$" && req.url ~ "\.(jpg|jpeg|webp|gif|png|svg|svgz|ico|css|zip|tgz|tbz|gz|rar|bz2|pdf|txt|tar|wav|ogg|ogv|webm|mp3|mp4|bmp|rtf|js|flv|swf|html|htm|woff|ttf|ttc|otf|eot)$") {
+sub vcl_backend_response {
+	if (bereq.method ~ "^(GET|HEAD)$" && bereq.url ~ "\.(jpg|jpeg|webp|gif|png|svg|svgz|ico|css|zip|tgz|tbz|gz|rar|bz2|pdf|txt|tar|wav|ogg|ogv|webm|mp3|mp4|bmp|rtf|js|flv|swf|html|htm|woff|ttf|ttc|otf|eot)$") {
 		unset beresp.http.set-cookie;
 		set beresp.ttl = 24h;
 		set beresp.grace = 2m;
