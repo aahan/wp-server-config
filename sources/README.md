@@ -6,8 +6,7 @@
 
 **Apache:**
 
-- HTML5 Boilerplate's [Server Configs](https://github.com/h5bp/server-configs)
-	- H5BP [Apache Configs](https://github.com/h5bp/server-configs-apache)
+- HTML5 Boilerplate's [Server Configs](https://github.com/h5bp/server-configs) → H5BP [Apache Configs](https://github.com/h5bp/server-configs-apache)
 - [W3 Total Cache](https://wordpress.org/plugins/w3-total-cache/): From W3 Total Cache Settings (WP-ADMIN > Performance > Install > .htaccess Rewrite rules), after installing the plugin and setting up certain features, e.g. Browser Cache, CDN, etc.
 
 **Varnish:**
