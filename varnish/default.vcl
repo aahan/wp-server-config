@@ -84,28 +84,32 @@ sub vcl_hash {
 	}
 }
 
-sub vcl_hit {
-	if (req.method == "PURGE") {
-		purge;
-		error 200 "Purged.";
-	}
-}
-
-sub vcl_miss {
-	if (req.method == "PURGE") {
-		purge;
-		error 200 "Purged.";
-	}
-}
+# Invalidation with purge:
+# In Varnish 4, cache invalidation with purges is now done via return(purge) from vcl_recv.
+# The purge; keyword has been retired.
+#
+# sub vcl_hit {
+# 	if (req.method == "PURGE") {
+# 		purge;
+# 		error 200 "Purged.";
+# 	}
+# }
+#
+# sub vcl_miss {
+# 	if (req.method == "PURGE") {
+# 		purge;
+# 		error 200 "Purged.";
+# 	}
+# }
 
 sub vcl_backend_response {
 	# Don't store backend
-	if (req.url ~ "nocache|wp-admin|admin|login|wp-(comments-post|login|signup|activate|mail|cron)\.php|preview\=true|admin-ajax\.php|xmlrpc\.php|bb-admin|server-status|control\.php|bb-login\.php|bb-reset-password\.php|register\.php") {
+	if (bereq.url ~ "nocache|wp-admin|admin|login|wp-(comments-post|login|signup|activate|mail|cron)\.php|preview\=true|admin-ajax\.php|xmlrpc\.php|bb-admin|server-status|control\.php|bb-login\.php|bb-reset-password\.php|register\.php") {
 		set beresp.uncacheable = true;
 		return (deliver);
 	}
 	# Otherwise cache away!
-	if ( (!(req.url ~ "nocache|wp-admin|admin|login|wp-(comments-post|login|signup|activate|mail|cron)\.php|preview\=true|admin-ajax\.php|xmlrpc\.php|bb-admin|server-status|control\.php|bb-login\.php|bb-reset-password\.php|register\.php")) || (req.method == "GET") ) {
+	if ( (!(bereq.url ~ "nocache|wp-admin|admin|login|wp-(comments-post|login|signup|activate|mail|cron)\.php|preview\=true|admin-ajax\.php|xmlrpc\.php|bb-admin|server-status|control\.php|bb-login\.php|bb-reset-password\.php|register\.php")) || (bereq.method == "GET") ) {
 		unset beresp.http.set-cookie;
 		set beresp.ttl = 2h;
 	}
@@ -162,10 +166,10 @@ sub vcl_backend_response {
 sub vcl_deliver {
 
 	# Remove unnecessary headers
-	remove resp.http.Server;
-	remove resp.http.X-Powered-By;
-	remove resp.http.X-Varnish;
-	remove resp.http.Via;
+	unset resp.http.Server;
+	unset resp.http.X-Powered-By;
+	unset resp.http.X-Varnish;
+	unset resp.http.Via;
 
 	# DIAGNOSTIC HEADERS
 	if (obj.hits > 0) {
