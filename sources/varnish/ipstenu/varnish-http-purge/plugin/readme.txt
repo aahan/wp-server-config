@@ -2,8 +2,8 @@
 Contributors: techpriester, Ipstenu, DH-Shredder
 Tags: varnish, purge, cache
 Requires at least: 3.4
-Tested up to: 3.9
-Stable tag: 3.5
+Tested up to: 4.1
+Stable tag: 3.7
 
 Purge Varnish Cache when post content on your site is modified.
 
@@ -56,7 +56,7 @@ Until the WordPress Language Pack system is deployable, I'm storing them <a href
 
 = What version of Varnish is supported? =
 
-This was built and tested on Varnish 3.x, however it is reported to work on 2.x. It is only supported on v3 at this time.
+This was built and tested on Varnish 3.x, however it is reported to work on 2.x and 4.x. It is only supported on v3 at this time.
 
 = Why doesn't every page flush when I make a new post? =
 
@@ -124,6 +124,10 @@ If your webhost set up Varnish for you, you may need to ask them for the specifi
     <li><strong>DreamHost</strong> - If you're using DreamPress and Cloudflare, go into the Panel and click on the DNS settings for the domain. The entry for <em>resolve-to.domain</em> is your varnish server: `resolve-to.www A 208.97.157.172` -- If you're <em>NOT</em> using Cloudflare, you don't need it, but it's just your normal IP.</li>
 </ul>
 
+= What if I have multiple varnish IPs? =
+
+Right now it's not supported. I have a major issue with writing code I don't use, which means that since I'm only using one IP right now, I don't want to be on the ball for supporting multiple IPs. I don't even have a place to test is, which is just insane to attempt to code if you think about it. Yes, I could accept pull requests, but that means everyone's at some other person's discretion. So no, I won't be doing that at this time.
+
 = Why don't my gzip'd pages flush? =
 
 Make sure your Varnish VCL is configured correctly to purge all the right pages. This is normally an issue with Varnish 2, which is not supported.
@@ -141,6 +145,19 @@ This is a question beyond the support of plugin. I don't offer any Varnish Confi
 All of these VCLs work with this plugin.
 
 == Changelog ==
+
+= 3.7 = 
+* Optimizing flushes.
+* Add filter to allow other people to hook in when 3rd party plugins are abjectly weird (props jnachtigall)
+
+= 3.6 =
+* Making purge be http only, since Varnish doesn't support https. This will prevent other issues for people using SSL with Varnish (though goodness knows why...)
+* Forcing backslash on home_url. Why WP doesn't, I have no idea, but this will help sites not running regex.
+
+= 3.5.1 =
+* Language fix
+* Using add_query_arg
+* Ignore revisions
 
 = 3.5 =
 * Isset wrap for URL path and query which may not be set in rare conditions (props <a href="https://wordpress.org/support/topic/undefined-index-notices-4">hsz</a>)
@@ -207,5 +224,3 @@ All of these VCLs work with this plugin.
 1. What the button looks like
 
 == Upgrade Notice ==
-
-3.3.1 is just a language pack fix. Enjoy!

@@ -52,10 +52,14 @@ sub vcl_recv {
         return (pass);
     }
 
+    # For Websocket support, always pipe the requests: https://www.varnish-cache.org/docs/3.0/tutorial/websockets.html
+    if (req.http.Upgrade ~ "(?i)websocket") {
+        return (pipe);
+    }
+
     # Configure grace period, in case the backend goes down. This allows otherwise "outdated"
     # cache entries to still be served to the user, because the backend is unavailable to refresh them.
     # This may not be desireable for you, but showing a Varnish Guru Meditation error probably isn't either.
-    set req.grace = 15s;
     if (req.backend.healthy) {
         set req.grace = 30s;
     } else {
@@ -65,9 +69,9 @@ sub vcl_recv {
 
     # Some generic URL manipulation, useful for all templates that follow
     # First remove the Google Analytics added parameters, useless for our backend
-    if (req.url ~ "(\?|&)(utm_source|utm_medium|utm_campaign|gclid|cx|ie|cof|siteurl)=") {
-        set req.url = regsuball(req.url, "&(utm_source|utm_medium|utm_campaign|gclid|cx|ie|cof|siteurl)=([A-z0-9_\-\.%25]+)", "");
-        set req.url = regsuball(req.url, "\?(utm_source|utm_medium|utm_campaign|gclid|cx|ie|cof|siteurl)=([A-z0-9_\-\.%25]+)", "?");
+    if (req.url ~ "(\?|&)(utm_source|utm_medium|utm_campaign|utm_content|gclid|cx|ie|cof|siteurl)=") {
+        set req.url = regsuball(req.url, "&(utm_source|utm_medium|utm_campaign|utm_content|gclid|cx|ie|cof|siteurl)=([A-z0-9_\-\.%25]+)", "");
+        set req.url = regsuball(req.url, "\?(utm_source|utm_medium|utm_campaign|utm_content|gclid|cx|ie|cof|siteurl)=([A-z0-9_\-\.%25]+)", "?");
         set req.url = regsub(req.url, "\?&", "?");
         set req.url = regsub(req.url, "\?$", "");
     }
@@ -108,11 +112,14 @@ sub vcl_recv {
     set req.http.Cookie = regsuball(req.http.Cookie, "utmcmd.=[^;]+(; )?", "");
     set req.http.Cookie = regsuball(req.http.Cookie, "utmccn.=[^;]+(; )?", "");
 
+    # Remove DoubleClick offensive cookies
+    set req.http.Cookie = regsuball(req.http.Cookie, "__gads=[^;]+(; )?", "");
+
     # Remove the Quant Capital cookies (added by some plugin, all __qca)
     set req.http.Cookie = regsuball(req.http.Cookie, "__qc.=[^;]+(; )?", "");
 
     # Remove the AddThis cookies
-    set req.http.Cookie = regsuball(req.http.Cookie, "__atuvc=[^;]+(; )?", "");
+    set req.http.Cookie = regsuball(req.http.Cookie, "__atuv.=[^;]+(; )?", "");
 
     # Remove a ";" prefix in the cookie if present
     set req.http.Cookie = regsuball(req.http.Cookie, "^;\s*", "");
@@ -149,7 +156,7 @@ sub vcl_recv {
     # Remove all cookies for static files
     # A valid discussion could be held on this line: do you really need to cache static files that don't cause load? Only if you have memory left.
     # Sure, there's disk I/O, but chances are your OS will already have these files in their buffers (thus memory).
-    # Before you blindly enable this, have a read here: http://mattiasgeniar.be/2012/11/28/stop-caching-static-files/
+    # Before you blindly enable this, have a read here: https://ma.ttias.be/stop-caching-static-files/
     if (req.url ~ "^[^?]*\.(bmp|bz2|css|doc|eot|flv|gif|gz|ico|jpeg|jpg|js|less|pdf|png|rtf|swf|txt|woff|xml)(\?.*)?$") {
         unset req.http.Cookie;
         return (lookup);
@@ -178,6 +185,12 @@ sub vcl_pipe {
     # applications, like IIS with NTLM authentication.
 
     #set bereq.http.Connection = "Close";
+
+    # Needed for WS (Websocket) support: https://www.varnish-cache.org/docs/3.0/tutorial/websockets.html
+    if (req.http.upgrade) {
+        set bereq.http.upgrade = req.http.upgrade;
+    }
+
     return (pipe);
 }
 
@@ -234,6 +247,23 @@ sub vcl_fetch {
         set beresp.do_esi = true;
     }
 
+    # https://www.varnish-cache.org/docs/3.0/tutorial/compression.html
+    # gzip content that can be compressed
+    # Do wildcard matches, since additional info (like charsets) can be added in the Content-Type header
+    if (beresp.http.content-type ~ "text/plain"
+          || beresp.http.content-type ~ "text/xml"
+          || beresp.http.content-type ~ "text/css"
+          || beresp.http.content-type ~ "text/html"
+          || beresp.http.content-type ~ "application/(x-)?javascript"
+          || beresp.http.content-type ~ "application/(x-)?font-ttf"
+          || beresp.http.content-type ~ "application/(x-)?font-opentype"
+          || beresp.http.content-type ~ "application/font-woff"
+          || beresp.http.content-type ~ "application/vnd\.ms-fontobject"
+          || beresp.http.content-type ~ "image/svg\+xml"
+       ) {
+        set beresp.do_gzip = true;
+    }
+
     # If the request to the backend returns a code is 5xx, restart the loop
     # If the number of restarts reaches the value of the parameter max_restarts,
     # the request will be error'ed.  max_restarts defaults to 4.  This prevents
@@ -244,7 +274,7 @@ sub vcl_fetch {
 
     # Enable cache for all static files
     # The same argument as the static caches from above: monitor your cache size, if you get data nuked out of it, consider giving up the static file cache.
-    # Before you blindly enable this, have a read here: http://mattiasgeniar.be/2012/11/28/stop-caching-static-files/
+    # Before you blindly enable this, have a read here: https://ma.ttias.be/stop-caching-static-files/
     if (req.url ~ "^[^?]*\.(bmp|bz2|css|doc|eot|flv|gif|gz|ico|jpeg|jpg|js|less|mp[34]|pdf|png|rar|rtf|swf|tar|tgz|txt|wav|woff|xml|zip)(\?.*)?$") {
         unset beresp.http.set-cookie;
     }
@@ -265,7 +295,26 @@ sub vcl_fetch {
         return (hit_for_pass);
     }
 
-    # Allow stale content, in case the backend goes down.
+    # If the backend response is an HTTP error (500, 502, 503), enter saint mode.
+    # This will block this particular request from happening again to this backend, and will restart the request on the next available backend.
+    # In case, for instance, the first backend is temporarily unavailable, this will restart the request to the second backend, without the client noticing it.
+    #
+    # Explained from the manual: by setting beresp.saintmode to a period of time, Varnish will not ask that backend again for this object for that amount of time.
+    # This only works if you have multiple baceknds.
+    if (beresp.status == 500 || beresp.status == 502 || beresp.status == 503) {
+        # Don't use this server, for this particular URL, for the next 10 seconds.
+        set beresp.saintmode = 10s;
+
+        # Restart the HTTP request, this will automatically happen on the next available server (due to saintmode, see above).
+        # But we don't want to restart POST requests, as that's dangerous (duplicate form submits etc.)
+        if (req.request != "POST") {
+            return(restart);
+        }
+    }
+
+    # Keep all objects for 6h longer in the cache than their TTL specifies.
+    # So even if HTTP objects are expired (they've passed their TTL), we can still use them in case all backends go down.
+    # Remember: old content to show is better than no content at all (or an error page).
     set beresp.grace = 6h;
 
     return (deliver);

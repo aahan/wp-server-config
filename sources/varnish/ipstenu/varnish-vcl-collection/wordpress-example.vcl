@@ -1,36 +1,42 @@
-# Read:
-# https://www.varnish-cache.org/docs/3.0/tutorial/vcl.html
-	# https://www.varnish-cache.org/docs/4.0/users-guide/vcl.html
-# https://www.varnish-software.com/static/book/VCL_Basics.html
-
-# TO DOs
-# Varnish Tuner: https://www.varnish-software.com/blog/introducing-varnish-tuner
-
 # Marker to tell the VCL compiler that this VCL has been adapted to the
 # new 4.0 format.
 vcl 4.0;
 
+# Default backend definition. Set this to point to your content server.
 backend default {
-	.host = "127.0.0.1";
-	.port = "8080";
+    .host = "127.0.0.1";
+    .port = "8080";
 }
 
 import std;
 
-include "inc/xforward.vcl";
-include "inc/purge.vcl";
-include "inc/bigfiles.vcl";        # Varnish 3.0.3+
-include "inc/static.vcl";
+include "lib/xforward.vcl";
+include "lib/cloudflare.vcl";
+include "lib/purge.vcl";
+include "lib/bigfiles.vcl";        # Varnish 3.0.3+
+#include "lib/bigfiles_pipe.vcl";  # Varnish 3.0.2
+include "lib/static.vcl";
+
+acl cloudflare {
+	# set this ip to your Railgun IP (if applicable)
+	# "1.2.3.4";
+}
 
 acl purge {
 	"localhost";
 	"127.0.0.1";
 }
 
+# Pick just one of the following:
+# (or don't use either of these if your application is "adaptive")
+# include "lib/mobile_cache.vcl";
+# include "lib/mobile_pass.vcl";
+
 ### WordPress-specific config ###
+# This config was initially derived from the work of Donncha Ó Caoimh:
+# http://ocaoimh.ie/2011/08/09/speed-up-wordpress-with-apache-and-varnish/
 sub vcl_recv {
-	# Handling CONNECT and Non-RFC2616 HTTP Methods
-	# i.e. request method isn't one of the 'normal' web site or web service methods
+	# pipe on weird http methods
 	if (req.method !~ "^GET|HEAD|PUT|POST|TRACE|OPTIONS|DELETE$") {
 		return(pipe);
 	}
@@ -38,10 +44,6 @@ sub vcl_recv {
 	### Check for reasons to bypass the cache!
 	# never cache anything except GET/HEAD
 	if (req.method != "GET" && req.method != "HEAD") {
-		return(pass);
-	}
-	# Don't cache when authorization header is being provided by client
-	if (req.http.Authorization || req.http.Authenticate) {
 		return(pass);
 	}
 	# don't cache logged-in users or authors
@@ -52,8 +54,8 @@ sub vcl_recv {
 	if (req.http.X-Requested-With == "XMLHttpRequest") {
 		return(pass);
 	}
-	# don't cache these special pages, e.g. urls with ?nocache or comments, login, regiser, signup, ajax, etc.
-	if (req.url ~ "nocache|wp-admin|wp-(comments-post|login|signup|activate|mail|cron)\.php|preview\=true|admin-ajax\.php|xmlrpc\.php|bb-admin|server-status|control\.php|bb-login\.php|bb-reset-password\.php|register\.php") {
+	# don't cache these special pages
+	if (req.url ~ "nocache|wp-admin|wp-(comments-post|login|activate|mail)\.php|bb-admin|server-status|control\.php|bb-login\.php|bb-reset-password\.php|register\.php") {
 		return(pass);
 	}
 
@@ -71,12 +73,6 @@ sub vcl_recv {
 	return(hash);
 }
 
-sub vcl_pipe {
-	# Force every pipe request to be the first one.
-	# https://www.varnish-cache.org/trac/wiki/VCLExamplePipe
-	set bereq.http.connection = "close";
-}
-
 sub vcl_hash {
 	# Add the browser cookie only if a WordPress cookie found.
 	if (req.http.Cookie ~ "wp-postpass_|wordpress_logged_in_|comment_author|PHPSESSID") {
@@ -84,32 +80,7 @@ sub vcl_hash {
 	}
 }
 
-sub vcl_hit {
-	if (req.method == "PURGE") {
-		purge;
-		error 200 "Purged.";
-	}
-}
-
-sub vcl_miss {
-	if (req.method == "PURGE") {
-		purge;
-		error 200 "Purged.";
-	}
-}
-
 sub vcl_backend_response {
-	# Don't store backend
-	if (req.url ~ "nocache|wp-admin|admin|login|wp-(comments-post|login|signup|activate|mail|cron)\.php|preview\=true|admin-ajax\.php|xmlrpc\.php|bb-admin|server-status|control\.php|bb-login\.php|bb-reset-password\.php|register\.php") {
-		set beresp.uncacheable = true;
-		return (deliver);
-	}
-	# Otherwise cache away!
-	if ( (!(req.url ~ "nocache|wp-admin|admin|login|wp-(comments-post|login|signup|activate|mail|cron)\.php|preview\=true|admin-ajax\.php|xmlrpc\.php|bb-admin|server-status|control\.php|bb-login\.php|bb-reset-password\.php|register\.php")) || (req.method == "GET") ) {
-		unset beresp.http.set-cookie;
-		set beresp.ttl = 2h;
-	}
-
 	# make sure grace is at least 2 minutes
 	if (beresp.grace < 2m) {
 		set beresp.grace = 2m;
@@ -124,25 +95,29 @@ sub vcl_backend_response {
 	if (beresp.ttl <= 0s) {
 		set beresp.http.X-Cacheable = "NO:Not Cacheable";
 		set beresp.uncacheable = true;
-		return (deliver);
+        	set beresp.ttl = 120s;
+        	return (deliver);
+
 
 	# You don't wish to cache content for logged in users
 	} else if (bereq.http.Cookie ~ "wp-postpass_|wordpress_logged_in_|comment_author|PHPSESSID") {
 		set beresp.http.X-Cacheable = "NO:Got Session";
 		set beresp.uncacheable = true;
-		return (deliver);
+        	set beresp.ttl = 120s;
+        	return (deliver);
 
 	# You are respecting the Cache-Control=private header from the backend
 	} else if (beresp.http.Cache-Control ~ "private") {
 		set beresp.http.X-Cacheable = "NO:Cache-Control=private";
 		set beresp.uncacheable = true;
-		return (deliver);
+        	set beresp.ttl = 120s;
+        	return (deliver);
 
 	# You are extending the lifetime of the object artificially
-	# } else if (beresp.ttl < 300s) {
-	# 	set beresp.ttl   = 300s;
-	# 	set beresp.grace = 300s;
-	# 	set beresp.http.X-Cacheable = "YES:Forced";
+	} else if (beresp.ttl < 300s) {
+		set beresp.ttl   = 300s;
+		set beresp.grace = 300s;
+		set beresp.http.X-Cacheable = "YES:Forced";
 
 	# Varnish determined the object was cacheable
 	} else {
@@ -157,21 +132,4 @@ sub vcl_backend_response {
 
 	# Deliver the content
 	return(deliver);
-}
-
-sub vcl_deliver {
-
-	# Remove unnecessary headers
-	remove resp.http.Server;
-	remove resp.http.X-Powered-By;
-	remove resp.http.X-Varnish;
-	remove resp.http.Via;
-
-	# DIAGNOSTIC HEADERS
-	if (obj.hits > 0) {
-		set resp.http.X-Cache = "HIT";
-	} else {
-		set resp.http.X-Cache = "MISS";
-	}
-
 }
